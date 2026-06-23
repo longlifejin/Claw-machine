@@ -99,6 +99,9 @@ public class ClawNetwork : MonoBehaviour
             case "confirm":
                 if (pressed) claw.Confirm();
                 break;
+            case "release":
+                if (pressed) claw.Release();
+                break;
 
             case "all": // ¿¬°á ²÷±è µî ºñ»ó Á¤Áö
                 currentDir = Vector2.zero;

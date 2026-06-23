@@ -9,8 +9,6 @@ public class ClawMove : MonoBehaviour
     [SerializeField] float moveSpeed = 0.3f;
     [SerializeField] float rangeX = 0.31f;
     [SerializeField] float rangeZ = 0.31f; 
-    [SerializeField] bool invertX = true;
-    [SerializeField] bool invertZ = true;
 
     [SerializeField] float cableLength = 1.5f;
     [SerializeField] float gravity = 9.8f;
@@ -30,7 +28,7 @@ public class ClawMove : MonoBehaviour
     [SerializeField] float dropSpeed = 2f;     // 내려가고 올라오는 속도
     [SerializeField] float legSpeed = 90f;     // 다리 펼침/오므림 속도 (도/초)
     private Quaternion[] legBaseRot;
-    private enum GrabState { Idle, Opening, Dropping, Closing, Lifting }
+    private enum GrabState { Idle, Opening, Dropping, Closing, Lifting, Waiting, Releasing }
     private GrabState grabState = GrabState.Idle; 
 
     private float baseCableLength;  // grab 시작 시점의 cableLength 기억
@@ -66,6 +64,9 @@ public class ClawMove : MonoBehaviour
 
         //if (Input.GetKeyDown(KeyCode.Space) && grabState == GrabState.Idle)
         //    grabState = GrabState.Opening;
+
+        //if(Input.GetKeyDown(KeyCode.R) && grabState == GrabState.Waiting)
+        //    grabState = GrabState.Releasing;
         //-----------------
 
 
@@ -110,6 +111,8 @@ public class ClawMove : MonoBehaviour
         switch (grabState)
         {
             case GrabState.Idle:
+                currentLegAngle = Mathf.MoveTowards(currentLegAngle, 0, legSpeed * dt);
+                SetLegAngle(currentLegAngle);
                 break;
 
             case GrabState.Opening:
@@ -135,7 +138,17 @@ public class ClawMove : MonoBehaviour
             case GrabState.Lifting:
                 cableLength = Mathf.MoveTowards(cableLength, baseCableLength, dropSpeed * dt);
                 if (Mathf.Approximately(cableLength, baseCableLength))
+                    grabState = GrabState.Waiting;
+                break;
+
+            case GrabState.Releasing:
+                currentLegAngle = Mathf.MoveTowards(currentLegAngle, openAngle, legSpeed * dt);
+                SetLegAngle(currentLegAngle);
+                if (Mathf.Approximately(currentLegAngle, openAngle))
                     grabState = GrabState.Idle;
+                break;
+
+            case GrabState.Waiting:
                 break;
         }
     }
@@ -144,12 +157,17 @@ public class ClawMove : MonoBehaviour
     {
         h = vec.x;
         v = vec.y;
-        Debug.Log(vec);
     }
 
     public void Confirm()
     {
         if (grabState == GrabState.Idle)
            grabState = GrabState.Opening;
+    }
+
+    public void Release()
+    {
+        if (grabState == GrabState.Waiting)
+            grabState = GrabState.Releasing;
     }
 }
