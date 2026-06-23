@@ -15,8 +15,8 @@ using Newtonsoft.Json;
 public class ClawNetwork : MonoBehaviour
 {
     [Header("연결 설정")]
-    [SerializeField] string serverUrl = "http://localhost:3000"; // 같은 PC면 localhost
-    [SerializeField] string machineId = "machine01";              // 폰 페이지의 MACHINE_ID와 같아야 함
+    [SerializeField] string serverUrl = "https://claw-machine-9pd6.onrender.com";
+    [SerializeField] string machineId = "machine01"; // 폰 페이지의 MACHINE_ID와 같아야 함
 
     [Header("조작 대상")]
     [SerializeField] ClawMove claw;
@@ -91,9 +91,6 @@ public class ClawNetwork : MonoBehaviour
 
         switch (msg.cmd)
         {
-            // 화면 기준에 맞춘 매핑.
-            // 키보드에서 v(앞뒤)를 X에, h(좌우)를 Z에 넣고 좌우 반전했던 것과 동일하게 맞춤.
-            // 갈고리가 반대로 가면 아래 부호만 조정하면 됨.
             case "up": currentDir = pressed ? new Vector2(0f, 1f) : ClearAxis(currentDir, 'y'); break;
             case "down": currentDir = pressed ? new Vector2(0f, -1f) : ClearAxis(currentDir, 'y'); break;
             case "left": currentDir = pressed ? new Vector2(-1f, 0f) : ClearAxis(currentDir, 'x'); break;
@@ -122,7 +119,6 @@ public class ClawNetwork : MonoBehaviour
         socket?.Disconnect();
     }
 
-    // 서버가 보내는 JSON 형태와 일치시키는 클래스
     [Serializable]
     class InputData
     {

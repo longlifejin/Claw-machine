@@ -60,8 +60,14 @@ public class ClawMove : MonoBehaviour
     {
         float dt = Time.deltaTime;
 
-        //float h = Input.GetAxisRaw("Horizontal");  // A/D
-        //float v = Input.GetAxisRaw("Vertical");    // W/S
+        //--- 이동 입력 ---
+        //h = Input.GetAxisRaw("Horizontal");  // A/D
+        //v = Input.GetAxisRaw("Vertical");    // W/S
+
+        //if (Input.GetKeyDown(KeyCode.Space) && grabState == GrabState.Idle)
+        //    grabState = GrabState.Opening;
+        //-----------------
+
 
         Vector3 pos = anchor.localPosition;
         pos.x = Mathf.Clamp(pos.x + v * moveSpeed * Time.deltaTime,
@@ -88,8 +94,7 @@ public class ClawMove : MonoBehaviour
         Quaternion tiltScaled = Quaternion.Slerp(Quaternion.identity, tilt, tiltAmount / 90f);
         claw.rotation = tiltScaled * clawBaseRotation;   // 기본 회전 유지하면서 기울기만 추가
 
-        //if (Input.GetKeyDown(KeyCode.Space) && grabState == GrabState.Idle)
-        //    grabState = GrabState.Opening;
+        
 
         UpdateGrab(dt);
     }
@@ -107,30 +112,30 @@ public class ClawMove : MonoBehaviour
             case GrabState.Idle:
                 break;
 
-            case GrabState.Opening:  // 다리 펼치기
+            case GrabState.Opening:
                 currentLegAngle = Mathf.MoveTowards(currentLegAngle, openAngle, legSpeed * dt);
                 SetLegAngle(currentLegAngle);
                 if (Mathf.Approximately(currentLegAngle, openAngle))
                     grabState = GrabState.Dropping;
                 break;
 
-            case GrabState.Dropping:  // 줄 풀어 내려가기
+            case GrabState.Dropping:
                 cableLength = Mathf.MoveTowards(cableLength, baseCableLength + dropDepth, dropSpeed * dt);
                 if (Mathf.Approximately(cableLength, baseCableLength + dropDepth))
                     grabState = GrabState.Closing;
                 break;
 
-            case GrabState.Closing:  // 다리 오므리기
+            case GrabState.Closing:
                 currentLegAngle = Mathf.MoveTowards(currentLegAngle, closeAngle, legSpeed * dt);
                 SetLegAngle(currentLegAngle);
                 if (Mathf.Approximately(currentLegAngle, closeAngle))
                     grabState = GrabState.Lifting;
                 break;
 
-            case GrabState.Lifting:  // 줄 감아 올라오기
+            case GrabState.Lifting:
                 cableLength = Mathf.MoveTowards(cableLength, baseCableLength, dropSpeed * dt);
                 if (Mathf.Approximately(cableLength, baseCableLength))
-                    grabState = GrabState.Idle;  // 한 사이클 끝
+                    grabState = GrabState.Idle;
                 break;
         }
     }
@@ -139,6 +144,7 @@ public class ClawMove : MonoBehaviour
     {
         h = vec.x;
         v = vec.y;
+        Debug.Log(vec);
     }
 
     public void Confirm()
