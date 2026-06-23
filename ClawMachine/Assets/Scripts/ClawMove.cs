@@ -5,6 +5,7 @@ public class ClawMove : MonoBehaviour
     [SerializeField] Transform anchor; //케이블 상단 고정점
     [SerializeField] Transform claw; // 실제 갈고리 모형
 
+    [Header("Claw Movement")]
     [SerializeField] float moveSpeed = 0.3f;
     [SerializeField] float rangeX = 0.31f;
     [SerializeField] float rangeZ = 0.31f; 
@@ -15,12 +16,28 @@ public class ClawMove : MonoBehaviour
     [SerializeField] float gravity = 9.8f;
     [SerializeField] float damping = 0.98f;
     [SerializeField] float tiltAmount = 30f;
-
     private Vector3 prevClawPos;   // 한 프레임 전 위치 (속도 추출용)
     private Vector2 centerXZ;
     private Quaternion clawBaseRotation;
-    private float clawY;   // 고정할 Y 높이
 
+    [Header("Grab - Legs")]
+    [SerializeField] Transform[] legs;
+    [SerializeField] float openAngle = 30f;   // 펼칠 때 X 각도 (양수)
+    [SerializeField] float closeAngle = -25f; // 오므릴 때 X 각도 (음수)
+
+    [Header("Grab - Motion")]
+    [SerializeField] float dropDepth = 3f;     // 얼마나 내려갈지 (cableLength 증가량)
+    [SerializeField] float dropSpeed = 2f;     // 내려가고 올라오는 속도
+    [SerializeField] float legSpeed = 90f;     // 다리 펼침/오므림 속도 (도/초)
+    private Quaternion[] legBaseRot;
+    private enum GrabState { Idle, Opening, Dropping, Closing, Lifting }
+    private GrabState grabState = GrabState.Idle; 
+
+    private float baseCableLength;  // grab 시작 시점의 cableLength 기억
+    private float currentLegAngle;  // 현재 다리 X 각도
+
+    private float h;
+    private float v;
 
     private void Awake()
     {
@@ -30,13 +47,21 @@ public class ClawMove : MonoBehaviour
         //clawY = claw.position.y;
         clawBaseRotation = claw.rotation;
         prevClawPos = claw.position;
+
+        legBaseRot = new Quaternion[legs.Length];
+        for (int i = 0; i < legs.Length; i++)
+            legBaseRot[i] = legs[i].localRotation;
+
+        baseCableLength = cableLength;
+        currentLegAngle = 0f;
+        SetLegAngle(0f);
     }
     void Update()
     {
         float dt = Time.deltaTime;
 
-        float h = Input.GetAxisRaw("Horizontal");  // A/D
-        float v = Input.GetAxisRaw("Vertical");    // W/S
+        //float h = Input.GetAxisRaw("Horizontal");  // A/D
+        //float v = Input.GetAxisRaw("Vertical");    // W/S
 
         Vector3 pos = anchor.localPosition;
         pos.x = Mathf.Clamp(pos.x + v * moveSpeed * Time.deltaTime,
@@ -62,5 +87,63 @@ public class ClawMove : MonoBehaviour
         // 기울기를 0~1로 약하게 보간한 뒤, 기본 회전 '위에' 얹음
         Quaternion tiltScaled = Quaternion.Slerp(Quaternion.identity, tilt, tiltAmount / 90f);
         claw.rotation = tiltScaled * clawBaseRotation;   // 기본 회전 유지하면서 기울기만 추가
+
+        //if (Input.GetKeyDown(KeyCode.Space) && grabState == GrabState.Idle)
+        //    grabState = GrabState.Opening;
+
+        UpdateGrab(dt);
+    }
+
+    private void SetLegAngle(float angleX)
+    {
+        for (int i = 0; i < legs.Length; i++)
+            legs[i].localRotation = legBaseRot[i] * Quaternion.Euler(angleX, 0f, 0f);
+    }
+
+    private void UpdateGrab(float dt)
+    {
+        switch (grabState)
+        {
+            case GrabState.Idle:
+                break;
+
+            case GrabState.Opening:  // 다리 펼치기
+                currentLegAngle = Mathf.MoveTowards(currentLegAngle, openAngle, legSpeed * dt);
+                SetLegAngle(currentLegAngle);
+                if (Mathf.Approximately(currentLegAngle, openAngle))
+                    grabState = GrabState.Dropping;
+                break;
+
+            case GrabState.Dropping:  // 줄 풀어 내려가기
+                cableLength = Mathf.MoveTowards(cableLength, baseCableLength + dropDepth, dropSpeed * dt);
+                if (Mathf.Approximately(cableLength, baseCableLength + dropDepth))
+                    grabState = GrabState.Closing;
+                break;
+
+            case GrabState.Closing:  // 다리 오므리기
+                currentLegAngle = Mathf.MoveTowards(currentLegAngle, closeAngle, legSpeed * dt);
+                SetLegAngle(currentLegAngle);
+                if (Mathf.Approximately(currentLegAngle, closeAngle))
+                    grabState = GrabState.Lifting;
+                break;
+
+            case GrabState.Lifting:  // 줄 감아 올라오기
+                cableLength = Mathf.MoveTowards(cableLength, baseCableLength, dropSpeed * dt);
+                if (Mathf.Approximately(cableLength, baseCableLength))
+                    grabState = GrabState.Idle;  // 한 사이클 끝
+                break;
+        }
+    }
+
+    public void MoveInput(Vector2 vec)
+    {
+        h = vec.x;
+        v = vec.y;
+    }
+
+    public void Confirm()
+    {
+        if (grabState == GrabState.Idle)
+           grabState = GrabState.Opening;
     }
 }

@@ -19,6 +19,5 @@ public class CableLine : MonoBehaviour
         line.positionCount = 2;
         line.SetPosition(0, anchor.position);  // 상단
         line.SetPosition(1, claw.position);    // 하단(갈고리)
-        Debug.Log($"anchor:{anchor.position}, claw:{claw.position}");
     }
 }

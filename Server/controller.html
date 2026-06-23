@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>인형뽑기 컨트롤러</title>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+    body {
+      margin: 0; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 24px;
+      background: #1a1a1f; color: #eee;
+      font-family: -apple-system, sans-serif; user-select: none;
+    }
+    #status { font-size: 14px; color: #888; }
+    #status.on { color: #5ad15a; }
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px);
+      gap: 8px;
+    }
+    .btn {
+      border: none; border-radius: 16px;
+      background: #33333a; color: #fff;
+      font-size: 28px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn:active { background: #d14060; }
+    .up    { grid-column: 2; grid-row: 1; }
+    .left  { grid-column: 1; grid-row: 2; }
+    .right { grid-column: 3; grid-row: 2; }
+    .down  { grid-column: 2; grid-row: 3; }
+    .confirm {
+      width: 256px; height: 70px;
+      border: none; border-radius: 16px;
+      background: #e0a020; color: #1a1a1f;
+      font-size: 22px; font-weight: bold;
+    }
+    .confirm:active { background: #f0c040; }
+  </style>
+</head>
+<body>
+  <div id="status">연결 중...</div>
+
+  <div class="dpad">
+    <button class="btn up"    data-cmd="up">▲</button>
+    <button class="btn left"  data-cmd="left">◀</button>
+    <button class="btn right" data-cmd="right">▶</button>
+    <button class="btn down"  data-cmd="down">▼</button>
+  </div>
+
+  <button class="confirm" data-cmd="confirm">확인 (뽑기)</button>
+
+  <!-- 서버가 보내주는 Socket.IO 라이브러리 -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const MACHINE_ID = "machine01"; // 어느 기계를 조작할지 (Unity와 같아야 함)
+
+    const socket = io(); // 이 페이지를 보내준 서버에 자동 연결
+    const statusEl = document.getElementById("status");
+
+    socket.on("connect", () => {
+      socket.emit("join", MACHINE_ID);
+      statusEl.textContent = "연결됨 ✓";
+      statusEl.classList.add("on");
+    });
+
+    socket.on("disconnect", () => {
+      statusEl.textContent = "연결 끊김";
+      statusEl.classList.remove("on");
+    });
+
+    // 버튼을 누르는 순간 / 떼는 순간을 각각 서버로 전송
+    // (갈고리는 "누르고 있는 동안" 움직여야 하므로 down/up을 구분)
+    function send(cmd, action) {
+      socket.emit("input", { machineId: MACHINE_ID, cmd, action });
+    }
+
+    document.querySelectorAll("[data-cmd]").forEach((btn) => {
+      const cmd = btn.dataset.cmd;
+
+      if (cmd === "confirm") {
+        // 확인은 누르는 순간 한 번만
+        btn.addEventListener("touchstart", (e) => { e.preventDefault(); send(cmd, "down"); });
+      } else {
+        // 방향키는 누름/뗌 둘 다
+        btn.addEventListener("touchstart", (e) => { e.preventDefault(); send(cmd, "down"); });
+        btn.addEventListener("touchend",   (e) => { e.preventDefault(); send(cmd, "up"); });
+      }
+    });
+  </script>
+</body>
+</html>
